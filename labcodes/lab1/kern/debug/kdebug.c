@@ -226,7 +226,7 @@ print_kerninfo(void) {
 }
 
 /* *
- * print_debuginfo - read and print the stat information for the address @eip,
+ * print_debuginfo - rEad And print the stat information for the address @eip,
  * and info.eip_fn_addr should be the first address of the related function.
  * */
 void
@@ -302,5 +302,19 @@ print_stackframe(void) {
       *           NOTICE: the calling funciton's return addr eip  = ss:[ebp+4]
       *                   the calling funciton's ebp = ss:[ebp]
       */
+    uint32_t ebp_value = read_ebp();
+    uint32_t eip_value = read_eip();
+    struct eipdebuginfo *infop = NULL;
+    for (int i = 0; i < STACKFRAME_DEPTH; i++) {
+        cprintf("ebp:0x%08x eip:0x%08x args:", ebp_value, eip_value);
+        uint32_t *arg_start = (uint32_t*)ebp_value + 2;
+        debuginfo_eip(eip_value, infop);
+        for (int j = 0; j < 4; ++j) {
+            cprintf("0x%08x ", arg_start[j]);
+        }
+        cprintf("\n");
+        print_debuginfo(eip_value-1);
+        eip_value = *((uint32_t*)ebp_value + 1);
+        ebp_value = *((uint32_t*)ebp_value);
+    }
 }
-

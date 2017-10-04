@@ -3,8 +3,8 @@
 .globl __alltraps
 .globl vector0
 vector0:
-  pushl $0
-  pushl $0
+  pushl $0 // tf_err
+  pushl $0 // tf_trapno
   jmp __alltraps
 .globl vector1
 vector1:

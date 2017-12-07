@@ -47,13 +47,14 @@ idt_init(void) {
       *     You don't know the meaning of this instruction? just google it! and check the libs/x86.h to know more.
       *     Notice: the argument of lidt is idt_pd. try to find it!
       */
-    extern uintptr_t __vectors[];
-    for (int i = 0; i < sizeof(idt) / sizeof(idt[0]); i++) {
-        SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
-    }
-    SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK], DPL_USER);
-
-    lidt(&idt_pd);
+  extern uintptr_t __vectors[];
+  for (int i = 0; i < sizeof(idt)/sizeof(idt[0]); i++) {
+    SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
+  }
+  // let software in user space can do a switch_to_kernel interrupt
+  SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK],DPL_USER);
+  // let CPU load idt we setup above to idtr
+  lidt(&idt_pd);
 }
 
 static const char *
@@ -164,14 +165,12 @@ trap_dispatch(struct trapframe *tf) {
         c = cons_getc();
         cprintf("serial [%03d] %c\n", c, c);
         break;
+
     case IRQ_OFFSET + IRQ_KBD:
         c = cons_getc();
         cprintf("kbd [%03d] %c\n", c, c);
-        if (c == '3') {
-
-
-        }
         break;
+
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
     case T_SWITCH_TOU:
         if (tf->tf_cs != USER_CS) {
@@ -186,6 +185,7 @@ trap_dispatch(struct trapframe *tf) {
             *((uint32_t*)tf - 1) = (uint32_t)&switchk2u;
             }
         break;
+
     case T_SWITCH_TOK:
         if (tf->tf_cs != KERNEL_CS) {
             tf->tf_cs = KERNEL_CS;

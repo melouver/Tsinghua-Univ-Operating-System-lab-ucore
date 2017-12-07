@@ -51,7 +51,9 @@ idt_init(void) {
   for (int i = 0; i < sizeof(idt)/sizeof(idt[0]); i++) {
     SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
   }
-  // let software in user space can do a switch_to_kernel interrupt
+  // let software in user space can request system call specifying the dpl = DPL_USER
+  //SETGATE(idt[T_SYSCALL], 0, GD_KTEXT, __vectors[T_SYSCALL], DPL_USER);
+  // lab1 challenge gate
   SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK],DPL_USER);
   // let CPU load idt we setup above to idtr
   lidt(&idt_pd);

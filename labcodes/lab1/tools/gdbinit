@@ -1,6 +1,7 @@
 file bin/kernel
 target remote :1234
-b * 0x7c00
-b kern_init
+b lab1_switch_to_user
+define hook-stop
+x/i $pc
+end
 continue
-x /2i $pc

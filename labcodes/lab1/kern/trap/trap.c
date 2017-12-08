@@ -171,21 +171,51 @@ trap_dispatch(struct trapframe *tf) {
     case IRQ_OFFSET + IRQ_KBD:
         c = cons_getc();
         cprintf("kbd [%03d] %c\n", c, c);
+        if (c == '3') {
+          // switch to user mode from kernel mode
+          if (tf->tf_cs != USER_CS) {
+            print_trapframe(tf);
+            // copy the whole trapframe to switchk2u
+            switchk2u = *tf; 
+            switchk2u.tf_cs = USER_CS; // hardware will assign back this to cs after this trap
+            switchk2u.tf_es = switchk2u.tf_ds = switchk2u.tf_ss = USER_DS;
+            // esp saves kernel trapframe's esp so can restore esp when we switch back to kernel
+            switchk2u.tf_esp = (uint32_t)tf + sizeof (struct trapframe) - 8;
+            switchk2u.tf_eflags |= FL_IOPL_MASK;
+            // setup esp points to  temporary user stack then pushed to esp
+            *((uint32_t*)tf - 1) = (uint32_t)&switchk2u;
+            print_trapframe(tf);
+          }
+        } else if (c == '0') {
+          // switch to kernel mode from user mode
+          if (tf->tf_cs != KERNEL_CS) {
+            print_trapframe(tf);
+            tf->tf_cs = KERNEL_CS;
+            tf->tf_ss = tf->tf_es =  tf->tf_ds = KERNEL_DS;
+            tf->tf_eflags &= ~FL_IOPL_MASK;
+            switchu2k = (struct trapframe*) (tf->tf_esp - (sizeof(struct trapframe) - 8));
+            // switch from user to kernel, just drop last 8 bytes in trapframe(esp & ss pushed by CPU automatically)
+            memmove(switchu2k, tf, sizeof(struct trapframe) - 8);
+            // jmp to kernel stack
+            *((uint32_t*)tf - 1) = (uint32_t)switchu2k;
+            print_trapframe(tf);
+          }
+        }
         break;
 
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
     case T_SWITCH_TOU:
         if (tf->tf_cs != USER_CS) {
-            switchk2u = *tf;
-            switchk2u.tf_cs = USER_CS;
+          // copy the whole trapframe to switchk2u
+            switchk2u = *tf; 
+            switchk2u.tf_cs = USER_CS; // hardware will assign back this to cs after this trap
             switchk2u.tf_es = switchk2u.tf_ds = switchk2u.tf_ss = USER_DS;
-            // tf_esp saves kernel trapframe's esp so can restore esp when we switch back to kernel
+            // esp saves kernel trapframe's esp so can restore esp when we switch back to kernel
             switchk2u.tf_esp = (uint32_t)tf + sizeof (struct trapframe) - 8;
-
             switchk2u.tf_eflags |= FL_IOPL_MASK;
-            // jmp to temporary user stack
+            // setup esp points to  temporary user stack then pushed to esp
             *((uint32_t*)tf - 1) = (uint32_t)&switchk2u;
-            }
+        }
         break;
 
     case T_SWITCH_TOK:
@@ -193,10 +223,8 @@ trap_dispatch(struct trapframe *tf) {
             tf->tf_cs = KERNEL_CS;
             tf->tf_ss = tf->tf_es =  tf->tf_ds = KERNEL_DS;
             tf->tf_eflags &= ~FL_IOPL_MASK;
-
             switchu2k = (struct trapframe*) (tf->tf_esp - (sizeof(struct trapframe) - 8));
             // switch from user to kernel, just drop last 8 bytes in trapframe(esp & ss pushed by CPU automatically)
-
             memmove(switchu2k, tf, sizeof(struct trapframe) - 8);
             // jmp to kernel stack
             *((uint32_t*)tf - 1) = (uint32_t)switchu2k;

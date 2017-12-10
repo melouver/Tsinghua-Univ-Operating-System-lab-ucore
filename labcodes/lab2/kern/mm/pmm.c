@@ -210,7 +210,7 @@ page_init(void) {
     extern char end[];
 
     npage = maxpa / PGSIZE;
-    pages = (struct Page *)ROUNDUP((void *)end, PGSIZE);
+    pages = (struct Page *)ROUNDUP((void *)end, PGSIZE); // place Page struct after the end
 
     for (i = 0; i < npage; i ++) {
         SetPageReserved(pages + i);

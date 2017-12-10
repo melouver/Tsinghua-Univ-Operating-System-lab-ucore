@@ -71,6 +71,7 @@ default_init_memmap(struct Page *base, size_t n) {
     struct Page *p = base;
     for (; p != base + n; p ++) {
         assert(PageReserved(p));
+        SetPageProperty(p);
         p->flags = p->property = 0;
         set_page_ref(p, 0);
     }
@@ -100,9 +101,16 @@ default_alloc_pages(size_t n) {
         if (page->property > n) {
             struct Page *p = page + n;
             p->property = page->property - n;
-            list_add(&free_list, &(p->page_link));
-    }
+            SetPageProperty(p);
+            {
+                // LYZ: You should insert the free page sorted by address
+                // rather than the FIFO policy shown in demo code
+                // list_add(&free_list, &(p->page_link));
+                list_add(list_prev(&(page->page_link)), &(p->page_link));
+            }
+        }
         nr_free -= n;
+        SetPageReserved(page);
         ClearPageProperty(page);
     }
     return page;

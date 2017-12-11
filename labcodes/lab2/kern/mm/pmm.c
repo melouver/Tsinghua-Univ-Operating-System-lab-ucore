@@ -323,7 +323,7 @@ pmm_init(void) {
     enable_paging();
 
     //reload gdt(third time,the last time) to map all physical memory
-    //virtual_addr 0~4G=liear_addr 0~4G
+    //virtual_addr 0~4G=linear_addr 0~4G
     //then set kernel stack(ss:esp) in TSS, setup TSS in gdt, load TSS
     gdt_init();
 
@@ -368,17 +368,28 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
      *   PTE_W           0x002                   // page table/directory entry flags bit : Writeable
      *   PTE_U           0x004                   // page table/directory entry flags bit : User can access
      */
-#if 0
-    pde_t *pdep = NULL;   // (1) find page directory entry
-    if (0) {              // (2) check if entry is not present
-                          // (3) check if creating is needed, then alloc page for page table
-                          // CAUTION: this page is used for page table, not for common data page
-                          // (4) set page reference
-        uintptr_t pa = 0; // (5) get linear address of page
-                          // (6) clear page content using memset
-                          // (7) set page directory entry's permission
+#if 1
+    pde_t *pdep = pgdir + PDX(la);   // (1) find page directory entry
+    if (!((*pdep) & PTE_P)) {              // (2) check if entry is not present
+        // (3) check if creating is needed, then alloc page for page table
+        // CAUTION: this page is used for page table, not for common data page
+        // (4) set page reference
+        // (5) get linear address of page ==> physical address ??? LYZ
+        // (6) clear page content using memset
+        // (7) set page directory entry's permission
+        uintptr_t pa = 0;
+        if (create) {
+            struct Page* p = alloc_page();
+            set_page_ref(p, 1);
+            pa = page2pa(p);
+            memset(KADDR(pa), 0, PGSIZE);
+            pgdir[PDX(la)] = pa | PTE_U | PTE_W | PTE_P;
+        } else {
+            return NULL;
+        }
     }
-    return NULL;          // (8) return page table entry
+    return &((pte_t*)KADDR(PDE_ADDR(*pdep)))[PTX(la)];          // (8) return page table entry
+    
 #endif
 }
 

@@ -211,7 +211,7 @@ trap_dispatch(struct trapframe *tf) {
         break;
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
     case T_SWITCH_TOU:
-            if (tf->tf_cs != USER_CS) {
+        if (tf->tf_cs != USER_CS) {
             // copy the whole trapframe to switchk2u
             switchk2u = *tf; 
             switchk2u.tf_cs = USER_CS; // hardware will assign back this to cs after this trap

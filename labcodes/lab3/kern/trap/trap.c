@@ -10,9 +10,9 @@
 #include <vmm.h>
 #include <swap.h>
 #include <kdebug.h>
-
+#include <string.h>
 #define TICK_NUM 100
-
+struct trapframe switchk2u, *switchu2k;
 static void print_ticks() {
     cprintf("%d ticks\n",TICK_NUM);
 #ifdef DEBUG_GRADE
@@ -48,6 +48,16 @@ idt_init(void) {
       *     You don't know the meaning of this instruction? just google it! and check the libs/x86.h to know more.
       *     Notice: the argument of lidt is idt_pd. try to find it!
       */
+    extern uintptr_t __vectors[];
+    for (int i = 0; i < sizeof(idt)/sizeof(idt[0]); i++) {
+        SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
+    }
+    // let software in user space can request system call specifying the dpl = DPL_USER
+    //SETGATE(idt[T_SYSCALL], 0, GD_KTEXT, __vectors[T_SYSCALL], DPL_USER);
+    // lab1 challenge gate
+    SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK],DPL_USER);
+    // let CPU load idt we setup above to idtr
+    lidt(&idt_pd);
 }
 
 static const char *
@@ -186,6 +196,10 @@ trap_dispatch(struct trapframe *tf) {
          * (2) Every TICK_NUM cycle, you can print some info using a funciton, such as print_ticks().
          * (3) Too Simple? Yes, I think so!
          */
+            ticks++;
+        if (!(ticks % TICK_NUM)) {
+            print_ticks();
+        }
         break;
     case IRQ_OFFSET + IRQ_COM1:
         c = cons_getc();
@@ -197,8 +211,29 @@ trap_dispatch(struct trapframe *tf) {
         break;
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
     case T_SWITCH_TOU:
+        if (tf->tf_cs != USER_CS) {
+            // copy the whole trapframe to switchk2u
+            switchk2u = *tf; 
+            switchk2u.tf_cs = USER_CS; // hardware will assign back this to cs after this trap
+            switchk2u.tf_es = switchk2u.tf_ds = switchk2u.tf_ss = USER_DS;
+            // esp saves kernel trapframe's esp so can restore esp when we switch back to kernel
+            switchk2u.tf_esp = (uint32_t)tf + sizeof (struct trapframe) - 8;
+            switchk2u.tf_eflags |= FL_IOPL_MASK;
+            // setup esp points to  temporary user stack then pushed to esp
+            *((uint32_t*)tf - 1) = (uint32_t)&switchk2u;
+        }
+        break;
     case T_SWITCH_TOK:
-        panic("T_SWITCH_** ??\n");
+        if (tf->tf_cs != KERNEL_CS) {
+            tf->tf_cs = KERNEL_CS;
+            tf->tf_ss = tf->tf_es =  tf->tf_ds = KERNEL_DS;
+            tf->tf_eflags &= ~FL_IOPL_MASK;
+            switchu2k = (struct trapframe*) (tf->tf_esp - (sizeof(struct trapframe) - 8));
+            // switch from user to kernel, just drop last 8 bytes in trapframe(esp & ss pushed by CPU automatically)
+            memmove(switchu2k, tf, sizeof(struct trapframe) - 8);
+            // jmp to kernel stack
+            *((uint32_t*)tf - 1) = (uint32_t)switchu2k;
+        }
         break;
     case IRQ_OFFSET + IRQ_IDE1:
     case IRQ_OFFSET + IRQ_IDE2:

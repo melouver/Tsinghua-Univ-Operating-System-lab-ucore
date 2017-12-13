@@ -347,5 +347,19 @@ print_stackframe(void) {
       *           NOTICE: the calling funciton's return addr eip  = ss:[ebp+4]
       *                   the calling funciton's ebp = ss:[ebp]
       */
+    uint32_t ebp_v = read_ebp(); // current ebp value
+    uint32_t eip_v = read_eip(); // current eip value 
+    for (int i = 0; ebp_v != 0 && i < STACKFRAME_DEPTH; i++) {
+        // recursive call until ebp the bottom of this segements
+        cprintf("ebp:0x%08x eip:0x%08x args:", ebp_v, eip_v);
+        for (int j = 0; j < 4; j++) {
+            // args start at [ebp+8], each one is 32 bit
+            cprintf("0x%08x ", *(uint32_t*)(ebp_v+(2+j)*4));
+        }
+        cprintf("\n");
+        print_debuginfo(eip_v-1);
+        eip_v = *(uint32_t*)(ebp_v+4); // eip was pushed before ebp was pushed
+        ebp_v = *((uint32_t*)ebp_v); // ebp's current value is the caller's original ebp
+    }
 }
 

@@ -59,7 +59,7 @@ idt_init(void) {
         SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
     }
     // let software in user space can request system call specifying the dpl = DPL_USER
-    //SETGATE(idt[T_SYSCALL], 0, GD_KTEXT, __vectors[T_SYSCALL], DPL_USER);
+    SETGATE(idt[T_SYSCALL], 1, GD_KTEXT, __vectors[T_SYSCALL], DPL_USER);
     // lab1 challenge gate
     SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK],DPL_USER);
     // let CPU load idt we setup above to idtr
@@ -67,6 +67,7 @@ idt_init(void) {
      /* LAB5 YOUR CODE */ 
      //you should update your lab1 code (just add ONE or TWO lines of code), let user app to use syscall to get the service of ucore
      //so you should setup the syscall interrupt gate in here
+
 }
 
 static const char *
@@ -234,9 +235,10 @@ trap_dispatch(struct trapframe *tf) {
         /* you should upate you lab1 code (just add ONE or TWO lines of code):
          *    Every TICK_NUM cycle, you should set current process's current->need_resched = 1
          */
-  	ticks++;
+            ticks++;
         if (!(ticks % TICK_NUM)) {
             print_ticks();
+            current->need_resched = 1;
         }
         break;
     case IRQ_OFFSET + IRQ_COM1:

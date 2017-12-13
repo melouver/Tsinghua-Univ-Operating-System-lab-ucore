@@ -113,7 +113,6 @@ alloc_proc(void) {
         proc->state = PROC_UNINIT;
         proc->pid = -1;
         proc->cr3 = boot_cr3;
-        proc->wait_state = WT_CHILD;
     }
     return proc;
 }
@@ -411,9 +410,9 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     if ((proc = alloc_proc()) == NULL) {
         goto fork_out;
     }
-
+    
     proc->parent = current;
-
+    assert(current->wait_state == 0);
     if (setup_kstack(proc) != 0) {
         goto bad_fork_cleanup_proc;
     }
@@ -427,8 +426,8 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     {
         proc->pid = get_pid();
         hash_proc(proc);
-        list_add(&proc_list, &(proc->list_link));
-        nr_process ++;
+        set_links(proc);
+        //nr_process ++;
     }
     local_intr_restore(intr_flag);
 

@@ -339,7 +339,7 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     hash_proc(proc);
     list_add(&proc_list, &(proc->list_link));
     
-    proc->state = PROC_RUNNABLE;
+    wakeup_proc(proc);
     ret = proc->pid;
 
 fork_out:

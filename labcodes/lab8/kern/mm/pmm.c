@@ -396,6 +396,26 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
     }
     return NULL;          // (8) return page table entry
 #endif
+pde_t *pdep = pgdir + PDX(la);   // (1) find page directory entry
+    if (!((*pdep) & PTE_P)) {              // (2) check if entry is not present
+        // (3) check if creating is needed, then alloc page for page table
+        // CAUTION: this page is used for page table, not for common data page
+        // (4) set page reference
+        // (5) get linear address of page ==> physical address ??? LYZ
+        // (6) clear page content using memset
+        // (7) set page directory entry's permission
+        uintptr_t pa = 0;
+        if (create) {
+            struct Page* p = alloc_page();
+            set_page_ref(p, 1);
+            pa = page2pa(p);
+            memset(KADDR(pa), 0, PGSIZE);
+            pgdir[PDX(la)] = pa | PTE_U | PTE_W | PTE_P;
+        } else {
+            return NULL;
+        }
+    }
+    return &((pte_t*)KADDR(PDE_ADDR(*pdep)))[PTX(la)];          // (8) return page table entry
 }
 
 //get_page - get related Page struct for linear address la using PDT pgdir
@@ -441,6 +461,15 @@ page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
                                   //(6) flush tlb
     }
 #endif
+if ((*ptep) & PTE_P) {
+        struct Page *page = pte2page(*ptep);
+        page_ref_dec(page);
+        if (page->ref == 0) {
+            free_page(page);
+        }
+        memset(KADDR(page2pa(page)), 0, PGSIZE);
+        tlb_invalidate(pgdir, la);
+    }
 }
 
 void
@@ -522,6 +551,10 @@ copy_range(pde_t *to, pde_t *from, uintptr_t start, uintptr_t end, bool share) {
          * (3) memory copy from src_kvaddr to dst_kvaddr, size is PGSIZE
          * (4) build the map of phy addr of  nage with the linear addr start
          */
+ 	void* la1 = page2kva(page);
+        void* la2 = page2kva(npage);
+        memcpy(la2, la1, PGSIZE);
+        page_insert(to, npage, start, perm);
         assert(ret == 0);
         }
         start += PGSIZE;

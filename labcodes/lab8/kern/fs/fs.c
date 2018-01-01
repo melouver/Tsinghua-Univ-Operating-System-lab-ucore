@@ -10,6 +10,7 @@
 //called when init_main proc start
 void
 fs_init(void) {
+    // vfs => sfs => device
     vfs_init();
     dev_init();
     sfs_init();

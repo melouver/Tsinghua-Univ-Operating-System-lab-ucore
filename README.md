@@ -1,7 +1,6 @@
-这是我对于清华大学UCore操作系统实验的解答代码。坦白来讲，大部分代码是在提示和理解答案的情况下完成的，我自己的个人发挥并不多，并且可能隐含着并未被测试程序所发现的bug。不过我自认为还是学到了不少东西，需要学的还很多。
-运行在kernel mode的代码往往充满着意外，需要极强的全局观来把控整个流程，有时候bug隐藏着，有时候对于bug无从下手，连gdb也无能为力。所以我深刻地体会到了能在user land写代码，是多么幸福的事情。
+This is my solution code for the UCore operating system experiment at Tsinghua University. To be honest, most of the code was completed with the help of prompts and understanding the answers. I didn't have much personal input, and there may be bugs that were not discovered by the testing program. However, I believe that I have learned a lot, but there is still much more to learn. Code running in kernel mode is often full of surprises and requires a strong global perspective to control the entire process. Sometimes bugs are hidden, and sometimes it's difficult to even start dealing with them, even with the help of gdb. Therefore, I deeply appreciate how fortunate it is to be able to write code in user land.
 
-# Future
+Future
 lab8 file system
 
 
